@@ -1,9 +1,8 @@
-.PHONY: help local-setup build update test test-coverage clean
+.PHONY: help local-setup build update test test-unit test-coverage clean
 
 .DEFAULT_GOAL := help
 
 PACKAGE_NAME = cmdweaver
-SPEC_DIR = spec
 
 help: ## Show this help
 	@echo "Available targets:"
@@ -23,13 +22,13 @@ update: ## Updates the app packages
 	pip install -e .
 	pip install -r requirements-dev.txt
 
-test: ## Run all tests
-	mamba $(SPEC_DIR)
+test: test-unit ## Run all tests (pytest)
+
+test-unit: ## Run unit tests with pytest
+	pytest tests/unit -v
 
 test-coverage: ## Run tests with coverage report
-	coverage run --source=$(PACKAGE_NAME) -m mamba $(SPEC_DIR)
-	coverage report -m
-	coverage html
+	pytest tests/unit --cov=$(PACKAGE_NAME) --cov-report=term-missing --cov-report=html
 
 clean: ## Clean build artifacts
 	rm -rf build/
@@ -38,6 +37,7 @@ clean: ## Clean build artifacts
 	rm -rf .coverage
 	rm -rf htmlcov/
 	rm -rf .mypy_cache/
+	rm -rf .pytest_cache/
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete
 	@echo "✅ Cleaned!"

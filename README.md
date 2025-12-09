@@ -23,13 +23,13 @@ You can install the package in development mode:
 python -m pip install -e .
 ```
 
-## Specs
+## Tests
 
-To run the cmdweaver specs you should create a virtual environment, install the development requirements and then run `mamba`.
+To run the cmdweaver tests you should create a virtual environment, install the development requirements and then run `pytest`.
 
 ```bash
 python -m pip install -r requirements-dev.txt
-mamba
+make test
 ```
 
 ## Contribute

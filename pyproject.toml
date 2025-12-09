@@ -38,7 +38,25 @@ Changelog = "https://github.com/eferro/cmdweaver/blob/master/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
-    "mamba",
+    "pytest",
+    "pytest-cov",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["cmdweaver"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
 ]
 
 [tool.setuptools]
@@ -48,4 +66,4 @@ packages = ["cmdweaver", "cmdweaver.readlinecli"]
 "" = "."
 
 [tool.setuptools.exclude-package-data]
-"*" = ["spec/*", "examples/*", "tests/*"]
+"*" = ["examples/*", "tests/*"]

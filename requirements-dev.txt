@@ -1,5 +1,5 @@
-mamba
+pytest
+pytest-cov
 pyhamcrest
 doublex
 coverage
-coveralls
