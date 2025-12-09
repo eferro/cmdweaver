@@ -1,60 +1,73 @@
+from __future__ import annotations
+
 import sys
+from typing import TYPE_CHECKING, Any, TextIO
 
 from cmdweaver import exceptions, filters
 from cmdweaver import parser as parser_module
 
+if TYPE_CHECKING:
+    from cmdweaver.command import Command
+
 
 class Context:
-    def __init__(self, context_name, prompt=None):
+    def __init__(self, context_name: str, prompt: str | None = None) -> None:
         self.context_name = context_name
-        self.prompt = prompt if prompt else self.context_name
-        self.data = {}
+        self.prompt: str = prompt if prompt else self.context_name
+        self.data: dict[str, Any] = {}
 
-    def is_default(self):
+    def is_default(self) -> bool:
         return False
 
-    def has_name(self, context_name):
+    def has_name(self, context_name: str) -> bool:
         return self.context_name == context_name
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Context:{self.context_name}"
 
 
 class DefaultContext(Context):
-    def __init__(self, prompt=None):
+    def __init__(self, prompt: str | None = None) -> None:
         super().__init__("Default", prompt=prompt)
 
-    def is_default(self):
+    def is_default(self) -> bool:
         return True
 
 
 class Interpreter:
-    def __init__(self, parser=None, filter_factory=None, output_stream=sys.stdout, prompt=""):
-        self._commands = []
+    def __init__(
+        self,
+        parser: parser_module.Parser | None = None,
+        filter_factory: filters.FilterFactory | None = None,
+        output_stream: TextIO = sys.stdout,
+        prompt: str = "",
+    ) -> None:
+        self._commands: list[Command] = []
         self.parser = parser if parser is not None else parser_module.Parser()
-        self.context = [DefaultContext(prompt)]
+        self.context: list[Context] = [DefaultContext(prompt)]
         self.filter_factory = filter_factory if filter_factory is not None else filters.FilterFactory()
         self.output_stream = output_stream
 
-    def add_command(self, command):
+    def add_command(self, command: Command) -> None:
         self._commands.append(command)
 
-    def push_context(self, context_name, prompt=None):
+    def push_context(self, context_name: str, prompt: str | None = None) -> None:
         self.context.append(Context(context_name, prompt))
 
-    def pop_context(self):
-        # We never let the default context be removed
+    def pop_context(self) -> None:
         if len(self.context) == 1:
             raise exceptions.NotContextDefinedError()
         self.context.pop()
 
-    def exit(self):
+    def exit(self) -> None:
         raise exceptions.EndOfProgram()
 
-    def _extract_command_and_filter(self, tokens):
+    def _extract_command_and_filter(
+        self, tokens: list[str]
+    ) -> tuple[list[str], list[str] | None, bool]:
         FILTER_SEP = "|"
-        command = []
-        filter_command = []
+        command: list[str] = []
+        filter_command: list[str] = []
         sep_found = False
         for token in tokens:
             if token == FILTER_SEP:
@@ -68,7 +81,7 @@ class Interpreter:
                 command.append(token)
         return command, filter_command or None, sep_found
 
-    def _filter_command(self, filter_tokens):
+    def _filter_command(self, filter_tokens: list[str]) -> filters.ByLineBaseFilter:
         try:
             if "include".startswith(filter_tokens[0]):
                 return self.filter_factory.create_include_filter(filter_tokens[1], self.output_stream)
@@ -78,7 +91,7 @@ class Interpreter:
         except IndexError as err:
             raise exceptions.SyntaxError() from err
 
-    def _matching_command(self, tokens, line_text):
+    def _matching_command(self, tokens: list[str], line_text: str) -> Command:
         perfect_matching_commands = self._select_perfect_matching_commands(tokens)
         if len(perfect_matching_commands) == 1:
             return perfect_matching_commands[0]
@@ -91,20 +104,20 @@ class Interpreter:
             raise exceptions.AmbiguousCommandError(matching_commands)
         raise exceptions.NoMatchingCommandFoundError(line_text)
 
-    def eval_multiple(self, lines):
-        results = []
+    def eval_multiple(self, lines: list[str]) -> list[Any]:
+        results: list[Any] = []
         for line in lines:
             results.append(self.eval(line))
         return results
 
-    def parse(self, line_text):
+    def parse(self, line_text: str) -> str | None:
         _, _, result = self._parse(line_text)
         return result.cmd_id if result else None
 
-    def eval(self, line_text):
+    def eval(self, line_text: str) -> Any:
         tokens, filter_tokens, matching_command = self._parse(line_text)
         if not matching_command:
-            return
+            return None
 
         if not filter_tokens:
             return self._execute_command(
@@ -117,7 +130,7 @@ class Interpreter:
                 matching_command, matching_command.normalize_tokens(tokens, self.actual_context())
             )
 
-    def _parse(self, line_text):
+    def _parse(self, line_text: str) -> tuple[list[str], list[str] | None, Command | None]:
         line_text = line_text.strip()
         if not line_text:
             return [], None, None
@@ -125,7 +138,7 @@ class Interpreter:
         tokens, filter_tokens, _ = self._extract_command_and_filter(self.parser.parse(line_text))
         return tokens, filter_tokens, self._matching_command(tokens, line_text)
 
-    def _execute_command(self, command, tokens):
+    def _execute_command(self, command: Command, tokens: list[str]) -> Any:
         arguments = command.matching_parameters(tokens)
         try:
             cmd_id = command.cmd_id
@@ -134,34 +147,32 @@ class Interpreter:
             else:
                 return command.execute(*arguments, tokens=tokens, interpreter=self, cmd_id=cmd_id)
         except KeyboardInterrupt:
-            pass
+            return None
 
-    def _select_perfect_matching_commands(self, tokens):
+    def _select_perfect_matching_commands(self, tokens: list[str]) -> list[Command]:
         return [command for command in self._commands if command.perfect_match(tokens, self.actual_context())]
 
-    def _select_matching_commands(self, tokens):
+    def _select_matching_commands(self, tokens: list[str]) -> list[Command]:
         return [command for command in self._commands if command.match(tokens, self.actual_context())]
 
-    def actual_context(self):
-        if len(self.context) > 0:
-            return self.context[-1]
-        return None
+    def actual_context(self) -> Context:
+        return self.context[-1]
 
-    def active_commands(self):
+    def active_commands(self) -> list[Command]:
         return [command for command in self._commands if command.context_match(self.actual_context())]
 
-    def _partial_match(self, line_text):
+    def _partial_match(self, line_text: str) -> list[Command]:
         tokens = self.parser.parse(line_text)
         return [command for command in self.active_commands() if command.partial_match(tokens, self.actual_context())]
 
-    def help(self, line_text):
+    def help(self, line_text: str) -> dict[Command, str | None]:
         return {command: command.help for command in self._partial_match(line_text)}
 
-    def all_commands_help(self):
+    def all_commands_help(self) -> dict[Command, str | None]:
         return {command: command.help for command in self._commands}
 
-    def complete(self, line_to_complete):
-        completions = set()
+    def complete(self, line_to_complete: str) -> set[str]:
+        completions: set[str] = set()
         tokens, filter_tokens, sep_found = self._extract_command_and_filter(self.parser.parse(line_to_complete))
         if filter_tokens:
             return {option for option in ["include", "exclude"] if option.startswith(filter_tokens[-1])}
@@ -173,9 +184,9 @@ class Interpreter:
         return completions
 
     @property
-    def prompt(self):
+    def prompt(self) -> str:
         return self.actual_context().prompt
 
     @prompt.setter
-    def prompt(self, value):
+    def prompt(self, value: str) -> None:
         self.actual_context().prompt = value
