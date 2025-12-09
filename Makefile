@@ -1,4 +1,4 @@
-.PHONY: help local-setup build update test test-unit test-coverage clean
+.PHONY: help local-setup build update test test-unit test-coverage check-typing check-format check-style reformat validate clean
 
 .DEFAULT_GOAL := help
 
@@ -29,6 +29,22 @@ test-unit: ## Run unit tests with pytest
 
 test-coverage: ## Run tests with coverage report
 	pytest tests/unit --cov=$(PACKAGE_NAME) --cov-report=term-missing --cov-report=html
+
+check-typing: ## Run static type checker (mypy)
+	mypy $(PACKAGE_NAME)
+
+check-format: ## Check code formatting (ruff format)
+	ruff format --check $(PACKAGE_NAME) tests
+
+check-style: ## Check code style (ruff lint)
+	ruff check $(PACKAGE_NAME) tests
+
+reformat: ## Format code (ruff format + fix)
+	ruff format $(PACKAGE_NAME) tests
+	ruff check --fix $(PACKAGE_NAME) tests
+
+validate: test-unit check-style check-typing ## Run tests, style, and typing checks
+	@echo "✅ All validations passed!"
 
 clean: ## Clean build artifacts
 	rm -rf build/

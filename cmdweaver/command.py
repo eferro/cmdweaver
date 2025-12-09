@@ -1,6 +1,3 @@
-from cmdweaver import basic_types
-
-
 class KeywordType:
     def __init__(self, name=None):
         self.name = name
@@ -14,12 +11,10 @@ class KeywordType:
         return word == self.name
 
     def partial_match(self, word, context, partial_line=None):
-        if self.name.startswith(word):
-            return True
-        return False
+        return bool(self.name.startswith(word))
 
     def __str__(self):
-        return '%s' % self.name
+        return f"{self.name}"
 
 
 class Command:
@@ -81,7 +76,7 @@ class Command:
             return False
 
         for index, word in enumerate(tokens):
-            if index == len(tokens) -1:
+            if index == len(tokens) - 1:
                 if not self._partial_match(index, word, context, partial_line=tokens):
                     return False
             else:
@@ -100,26 +95,19 @@ class Command:
         if not self.context_name and context.is_default():
             return True
 
-        if context.has_name(self.context_name):
-            return True
-        return False
+        return bool(context.has_name(self.context_name))
 
     def match(self, tokens, context):
         if not self.context_match(context):
             return False
         if len(tokens) != len(self.keywords):
             return False
-        for index, word in enumerate(tokens):
-            if not self._match_word(index, word, context, partial_line=tokens):
-                return False
-        return True
+        return all(self._match_word(index, word, context, partial_line=tokens) for index, word in enumerate(tokens))
 
     def perfect_match(self, tokens, context):
         if not self.match(tokens, context):
             return False
-        if self.normalize_tokens(tokens, context) != tokens:
-            return False
-        return True
+        return self.normalize_tokens(tokens, context) == tokens
 
     def matching_parameters(self, tokens):
         parameters = []
@@ -145,13 +133,11 @@ class Command:
         completions = []
         for completion in raw_completions:
             if isinstance(completion, tuple):
-                completions.append(completion[0] + (' ' if completion[1] else ''))
+                completions.append(completion[0] + (" " if completion[1] else ""))
             else:
-                completions.append(completion.strip() + ' ')
+                completions.append(completion.strip() + " ")
 
-        return [
-            completion.strip() if self._is_last_token(tokens) else completion for completion in completions
-        ]
+        return [completion.strip() if self._is_last_token(tokens) else completion for completion in completions]
 
     def _complete_keyword(self, definition, token, tokens, context):
         if definition == token:
@@ -167,9 +153,9 @@ class Command:
 
     def _select_token_to_complete(self, tokens):
         if not tokens:
-            return (self.keywords[0], '')
+            return (self.keywords[0], "")
         else:
-            return (self.keywords[len(tokens) -1], tokens[-1])
+            return (self.keywords[len(tokens) - 1], tokens[-1])
 
     def _is_keyword(self, definition):
         return isinstance(definition, str)

@@ -1,11 +1,10 @@
 import sys
-from cmdweaver import exceptions
+
+from cmdweaver import exceptions, filters
 from cmdweaver import parser as parser_module
-from cmdweaver import filters
 
 
 class Context:
-
     def __init__(self, context_name, prompt=None):
         self.context_name = context_name
         self.prompt = prompt if prompt else self.context_name
@@ -18,28 +17,23 @@ class Context:
         return self.context_name == context_name
 
     def __str__(self):
-        return "Context:%s" % self.context_name
+        return f"Context:{self.context_name}"
 
 
 class DefaultContext(Context):
     def __init__(self, prompt=None):
-        super().__init__('Default', prompt=prompt)
+        super().__init__("Default", prompt=prompt)
 
     def is_default(self):
         return True
 
 
 class Interpreter:
-
-    def __init__(self,
-                 parser=parser_module.Parser(),
-                 filter_factory=filters.FilterFactory(),
-                 output_stream=sys.stdout,
-                 prompt=''):
+    def __init__(self, parser=None, filter_factory=None, output_stream=sys.stdout, prompt=""):
         self._commands = []
-        self.parser = parser
+        self.parser = parser if parser is not None else parser_module.Parser()
         self.context = [DefaultContext(prompt)]
-        self.filter_factory = filter_factory
+        self.filter_factory = filter_factory if filter_factory is not None else filters.FilterFactory()
         self.output_stream = output_stream
 
     def add_command(self, command):
@@ -58,7 +52,7 @@ class Interpreter:
         raise exceptions.EndOfProgram()
 
     def _extract_command_and_filter(self, tokens):
-        FILTER_SEP = '|'
+        FILTER_SEP = "|"
         command = []
         filter_command = []
         sep_found = False
@@ -76,13 +70,13 @@ class Interpreter:
 
     def _filter_command(self, filter_tokens):
         try:
-            if 'include'.startswith(filter_tokens[0]):
+            if "include".startswith(filter_tokens[0]):
                 return self.filter_factory.create_include_filter(filter_tokens[1], self.output_stream)
-            if 'exclude'.startswith(filter_tokens[0]):
+            if "exclude".startswith(filter_tokens[0]):
                 return self.filter_factory.create_exclude_filter(filter_tokens[1], self.output_stream)
             raise exceptions.SyntaxError()
-        except IndexError:
-            raise exceptions.SyntaxError()
+        except IndexError as err:
+            raise exceptions.SyntaxError() from err
 
     def _matching_command(self, tokens, line_text):
         perfect_matching_commands = self._select_perfect_matching_commands(tokens)
@@ -113,11 +107,15 @@ class Interpreter:
             return
 
         if not filter_tokens:
-            return self._execute_command(matching_command, matching_command.normalize_tokens(tokens, self.actual_context()))
+            return self._execute_command(
+                matching_command, matching_command.normalize_tokens(tokens, self.actual_context())
+            )
 
         output_filter = self._filter_command(filter_tokens)
         with filters.RedirectStdout(output_filter):
-            return self._execute_command(matching_command, matching_command.normalize_tokens(tokens, self.actual_context()))
+            return self._execute_command(
+                matching_command, matching_command.normalize_tokens(tokens, self.actual_context())
+            )
 
     def _parse(self, line_text):
         line_text = line_text.strip()
@@ -164,12 +162,11 @@ class Interpreter:
 
     def complete(self, line_to_complete):
         completions = set()
-        tokens, filter_tokens, sep_found = self._extract_command_and_filter(
-            self.parser.parse(line_to_complete))
+        tokens, filter_tokens, sep_found = self._extract_command_and_filter(self.parser.parse(line_to_complete))
         if filter_tokens:
-            return {option for option in ['include', 'exclude'] if option.startswith(filter_tokens[-1])}
+            return {option for option in ["include", "exclude"] if option.startswith(filter_tokens[-1])}
         if sep_found:
-            return {' '}
+            return {" "}
 
         for command in self._partial_match(line_to_complete):
             completions.update(command.complete(tokens, self.actual_context()))

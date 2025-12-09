@@ -1,18 +1,19 @@
-import sys
 import re
+import sys
+
 
 class ByLineBaseFilter:
     def __init__(self):
-        self.output = ''
+        self.output = ""
 
     def write(self, data):
         self.output += data
-        k = self.output.rfind('\n')
+        k = self.output.rfind("\n")
         if k != -1:
             data_to_flush = self.output[:k]
             for line in data_to_flush.splitlines():
                 self.process_line(line)
-            self.output = self.output[k+1:]
+            self.output = self.output[k + 1 :]
 
     def flush(self):
         # only works by line, so ignore any flush
@@ -20,6 +21,7 @@ class ByLineBaseFilter:
 
     def process_line(self, line):
         pass
+
 
 class IncludeFilter(ByLineBaseFilter):
     def __init__(self, regex, stdout):
@@ -29,7 +31,7 @@ class IncludeFilter(ByLineBaseFilter):
 
     def process_line(self, line):
         if self.regex.search(line):
-            self.stdout.write(line + '\n')
+            self.stdout.write(line + "\n")
 
 
 class ExcludeFilter(ByLineBaseFilter):
@@ -40,13 +42,14 @@ class ExcludeFilter(ByLineBaseFilter):
 
     def process_line(self, line):
         if not self.regex.search(line):
-            self.stdout.write(line + '\n')
+            self.stdout.write(line + "\n")
 
 
 class RedirectStdout:
-    ''' Create a context manager for redirecting sys.stdout
-        to another file.
-    '''
+    """Create a context manager for redirecting sys.stdout
+    to another file.
+    """
+
     def __init__(self, new_target):
         self.new_target = new_target
         self.old_target = None

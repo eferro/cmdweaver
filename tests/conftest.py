@@ -1,10 +1,10 @@
 """Shared fixtures and test helpers for cmdweaver tests."""
+
 import pytest
 from doublex import Spy
 
-from cmdweaver import interpreter as interpreter_module
 from cmdweaver import basic_types
-from cmdweaver.command import Command
+from cmdweaver import interpreter as interpreter_module
 
 
 @pytest.fixture
@@ -29,10 +29,7 @@ class PlainCompletionsType(basic_types.BaseType):
         return word in self.options
 
     def partial_match(self, word, context, partial_line=None):
-        for option in self.options:
-            if option.startswith(word):
-                return True
-        return False
+        return any(option.startswith(word) for option in self.options)
 
     def complete(self, token, tokens, context):
         return self.options
@@ -50,4 +47,3 @@ class PartialCompletionsType(PlainCompletionsType):
 
     def complete(self, token, tokens, context):
         return [(value, False) for value in self.options if value.startswith(tokens[-1])]
-

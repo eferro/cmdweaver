@@ -15,14 +15,15 @@ class BaseType:
         return False
 
     def __str__(self):
-        if hasattr(self, 'name') and self.name:
-            return '<%s>' % self.name
-        return '<%s>' % self.__class__.__name__
+        if hasattr(self, "name") and self.name:
+            return f"<{self.name}>"
+        return f"<{self.__class__.__name__}>"
+
 
 class OrType:
     def __init__(self, *types, **kwargs):
         self.types = types
-        self.name = kwargs.get('name', None)
+        self.name = kwargs.get("name")
 
     def complete(self, token, tokens, context):
         completions = []
@@ -31,22 +32,15 @@ class OrType:
         return completions
 
     def match(self, word, context, partial_line=None):
-        for t in self.types:
-            if t.match(word, context, partial_line):
-                return True
-        return False
+        return any(t.match(word, context, partial_line) for t in self.types)
 
     def partial_match(self, word, context, partial_line=None):
-        for t in self.types:
-            if t.partial_match(word, context, partial_line):
-                return True
-        return False
+        return any(t.partial_match(word, context, partial_line) for t in self.types)
 
     def __str__(self):
-        if hasattr(self, 'name') and self.name:
-            return '<%s>' % self.name
-        return '<%s>' % self.__class__.__name__
-
+        if hasattr(self, "name") and self.name:
+            return f"<{self.name}>"
+        return f"<{self.__class__.__name__}>"
 
 
 class OptionsType(BaseType):
@@ -59,23 +53,19 @@ class OptionsType(BaseType):
         return word in self.get_valid_options()
 
     def partial_match(self, word, context, partial_line=None):
-        for op in self.get_valid_options():
-            if op.startswith(word):
-                return True
-        return False
+        return any(op.startswith(word) for op in self.get_valid_options())
 
     def complete(self, token, tokens, context):
-        return [(option, True)
-                for option in self.get_valid_options()
-                if option.startswith(token)]
+        return [(option, True) for option in self.get_valid_options() if option.startswith(token)]
 
     def get_valid_options(self):
         return self.valid_options
 
     def __str__(self):
         if self.name is not None:
-            return '<%s>' % self.name
-        return '<%s>' % ('|'.join(self.get_valid_options()))
+            return f"<{self.name}>"
+        return "<{}>".format("|".join(self.get_valid_options()))
+
 
 class DynamicOptionsType(OptionsType):
     def __init__(self, valid_options_func, name=None):
@@ -87,7 +77,6 @@ class DynamicOptionsType(OptionsType):
 
 
 class StringType(BaseType):
-
     def __init__(self, name=None):
         super().__init__(name)
 
@@ -97,14 +86,13 @@ class StringType(BaseType):
     def partial_match(self, word, context, partial_line=None):
         return len(word) > 0
 
-class BoolType(OptionsType):
 
+class BoolType(OptionsType):
     def __init__(self, name=None):
-        super().__init__(['true', 'false'], name)
+        super().__init__(["true", "false"], name)
 
 
 class IntegerType(BaseType):
-
     def __init__(self, min=None, max=None, name=None):
         super().__init__(name)
         self.min = min
@@ -112,15 +100,12 @@ class IntegerType(BaseType):
 
     def match(self, word, context, partial_line=None):
         try:
-            if self.min is not None:
-                if int(word) <= self.min:
-                    return False
-            if self.max is not None:
-                if int(word) >= self.max:
-                    return False
-            return True
+            if self.min is not None and int(word) <= self.min:
+                return False
+            return not (self.max is not None and int(word) >= self.max)
         except ValueError:
             return False
+
     def partial_match(self, word, context, partial_line=None):
         return self.match(word, context, partial_line)
 
