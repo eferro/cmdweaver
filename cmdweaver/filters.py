@@ -61,9 +61,7 @@ class RedirectStdout:
         sys.stdout = self.new_target
         return self
 
-    def __exit__(
-        self, exctype: type[BaseException] | None, excinst: BaseException | None, exctb: object
-    ) -> None:
+    def __exit__(self, exctype: type[BaseException] | None, excinst: BaseException | None, exctb: object) -> None:
         sys.stdout = self.old_target
 
 

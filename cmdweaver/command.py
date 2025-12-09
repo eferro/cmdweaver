@@ -1,21 +1,20 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Union
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 if TYPE_CHECKING:
     from cmdweaver.basic_types import BaseType
     from cmdweaver.interpreter import Context
 
-    KeywordDefinition = Union[str, BaseType]
+    KeywordDefinition: TypeAlias = str | BaseType
 
 
 class KeywordType:
     def __init__(self, name: str) -> None:
         self.name = name
 
-    def complete(
-        self, token: str, tokens: list[str], context: Context
-    ) -> list[tuple[str, bool]]:
+    def complete(self, token: str, tokens: list[str], context: Context) -> list[tuple[str, bool]]:
         if self.name.startswith(token):
             return [(self.name, True)]
         return []
@@ -149,9 +148,7 @@ class Command:
         definition, token = self._select_token_to_complete(tokens)
         return self.completions(definition, token, tokens, context)
 
-    def completions(
-        self, definition: KeywordDefinition, token: str, tokens: list[str], context: Context
-    ) -> list[str]:
+    def completions(self, definition: KeywordDefinition, token: str, tokens: list[str], context: Context) -> list[str]:
         if self._is_keyword(definition):
             raw_completions: list[Any] = self._complete_keyword(definition, token, tokens, context)  # type: ignore[arg-type]
         else:

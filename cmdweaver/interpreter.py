@@ -62,9 +62,7 @@ class Interpreter:
     def exit(self) -> None:
         raise exceptions.EndOfProgram()
 
-    def _extract_command_and_filter(
-        self, tokens: list[str]
-    ) -> tuple[list[str], list[str] | None, bool]:
+    def _extract_command_and_filter(self, tokens: list[str]) -> tuple[list[str], list[str] | None, bool]:
         FILTER_SEP = "|"
         command: list[str] = []
         filter_command: list[str] = []

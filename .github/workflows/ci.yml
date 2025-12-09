@@ -28,7 +28,7 @@ jobs:
           python -m pip install -e .
 
       - name: coverage run
-        run: mamba --enable-coverage .
+        run: pytest tests/unit --cov=cmdweaver --cov-report=term-missing
 
       - name: Coverage report
         run: coverage report -m

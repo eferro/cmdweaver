@@ -3,5 +3,6 @@ pytest-cov
 pyhamcrest
 doublex
 coverage
+coveralls
 ruff
 mypy
