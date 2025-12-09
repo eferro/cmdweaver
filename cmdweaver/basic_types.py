@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 if TYPE_CHECKING:
     from cmdweaver.interpreter import Context
 
-Completion = tuple[str, bool]
+Completion: TypeAlias = tuple[str, bool]
 
 
 class BaseType:

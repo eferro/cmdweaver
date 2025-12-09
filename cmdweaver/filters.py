@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 import re
 import sys
-from typing import TextIO
+from typing import Self, TextIO
 
 
 class ByLineBaseFilter:
@@ -56,7 +54,7 @@ class RedirectStdout:
         self.new_target = new_target
         self.old_target: TextIO | None = None
 
-    def __enter__(self) -> RedirectStdout:
+    def __enter__(self) -> Self:
         self.old_target = sys.stdout
         sys.stdout = self.new_target
         return self
