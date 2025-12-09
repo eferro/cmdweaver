@@ -46,3 +46,7 @@ tags
 
 # pyenv
 .python-version
+
+# Cursor/IDE
+.specstory
+.cursorindexingignore
