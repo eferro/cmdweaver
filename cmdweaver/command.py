@@ -1,4 +1,4 @@
-from boscli import basic_types
+from cmdweaver import basic_types
 
 
 class KeywordType:

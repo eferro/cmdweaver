@@ -1,9 +1,9 @@
 from doublex import Spy
 from hamcrest import assert_that, has_entries, has_entry, contains_string, is_not
 
-from boscli import basic_types
-from boscli import interpreter as interpreter_module
-from boscli.command import Command
+from cmdweaver import basic_types
+from cmdweaver import interpreter as interpreter_module
+from cmdweaver.command import Command
 
 with describe('Help'):
 

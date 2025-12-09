@@ -3,7 +3,7 @@ import time
 import traceback
 import readline
 import atexit
-from boscli import exceptions
+from cmdweaver import exceptions
 
 
 class ReadlineCli:

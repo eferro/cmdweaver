@@ -1,9 +1,9 @@
-# Boscli
+# cmdweaver
 
 ![Python versions supported](https://img.shields.io/badge/supports%20python-3.9%20|%203.10%20|%203.11%20|%203.12-blue.svg)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**Boscli** is the base infrastructure to create *ad hoc* shells or command line interfaces using Python.
+**cmdweaver** is the base infrastructure to create *ad hoc* shells or command line interfaces using Python.
 
 It includes an engine for command completion, types verification, command help and other useful features. It can be used with readline to provide advanced line editing, history and autocompletion.
 
@@ -25,7 +25,7 @@ python -m pip install -e .
 
 ## Specs
 
-To run the Boscli specs you should create a virtual environment, install the development requirements and then run `mamba`.
+To run the cmdweaver specs you should create a virtual environment, install the development requirements and then run `mamba`.
 
 ```bash
 python -m pip install -r requirements-dev.txt

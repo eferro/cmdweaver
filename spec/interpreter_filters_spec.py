@@ -1,8 +1,8 @@
 from doublex import Spy, Stub, assert_that, called
 
-from boscli import exceptions
-from boscli import interpreter as interpreter_module
-from boscli.command import Command
+from cmdweaver import exceptions
+from cmdweaver import interpreter as interpreter_module
+from cmdweaver.command import Command
 
 
 with describe('Interpreter filters'):

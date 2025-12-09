@@ -1,9 +1,9 @@
 from hamcrest import assert_that, has_items, has_length, contains
 from doublex import Stub
 
-from boscli import interpreter as interpreter_module
-from boscli import basic_types
-from boscli.command import Command
+from cmdweaver import interpreter as interpreter_module
+from cmdweaver import basic_types
+from cmdweaver.command import Command
 
 with describe('Autocomplete'):
 

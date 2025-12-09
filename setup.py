@@ -16,7 +16,7 @@ class MambaTest(TestCommand):
         sys.argv = ['mamba']
         mamba.cli.main()
 
-setup(name='boscli',
+setup(name='cmdweaver',
       version='0.9.3',
       author='Eduardo Ferro Aldama',
       author_email='eduardo.ferro.aldama@gmail.com',

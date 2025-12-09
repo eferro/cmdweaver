@@ -1,10 +1,10 @@
 from hamcrest import none, has_length, has_items, is_not, is_
 from doublex import Spy, assert_that, called, Stub, when, ANY_ARG
 
-import boscli
-from boscli import exceptions, basic_types
-from boscli import interpreter as interpreter_module
-from boscli.command import Command
+import cmdweaver
+from cmdweaver import exceptions, basic_types
+from cmdweaver import interpreter as interpreter_module
+from cmdweaver.command import Command
 
 with describe('Interpreter'):
     with before.each:

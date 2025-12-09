@@ -1,7 +1,7 @@
 from hamcrest import assert_that
 from doublex import Spy, called, never
 
-from boscli import filters
+from cmdweaver import filters
 
 
 with describe('Filters'):

@@ -1,7 +1,7 @@
 from hamcrest import is_
 from doublex import assert_that
 
-from boscli.command import Command
+from cmdweaver.command import Command
 
 with describe('Command'):
     with it('Allow to assign a command ID'):

@@ -2,7 +2,7 @@
 
 .DEFAULT_GOAL := help
 
-PACKAGE_NAME = boscli
+PACKAGE_NAME = cmdweaver
 SPEC_DIR = spec
 
 help: ## Show this help

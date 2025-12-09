@@ -1,7 +1,7 @@
 from hamcrest import has_length, contains_string, has_items, string_contains_in_order, contains
 from doublex import assert_that, is_, Spy, Stub, when
 
-from boscli import basic_types
+from cmdweaver import basic_types
 
 with describe('Or type'):
     with before.each:

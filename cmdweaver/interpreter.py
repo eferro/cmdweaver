@@ -1,7 +1,7 @@
 import sys
-from boscli import exceptions
-from boscli import parser as parser_module
-from boscli import filters
+from cmdweaver import exceptions
+from cmdweaver import parser as parser_module
+from cmdweaver import filters
 
 
 class Context:

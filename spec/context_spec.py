@@ -1,8 +1,8 @@
 from doublex import Spy, assert_that, called, ANY_ARG, is_, when, never
 
-from boscli import exceptions, basic_types
-from boscli import interpreter as interpreter_module
-from boscli.command import Command
+from cmdweaver import exceptions, basic_types
+from cmdweaver import interpreter as interpreter_module
+from cmdweaver.command import Command
 
 with context('Interpreter context'):
 

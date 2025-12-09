@@ -1,9 +1,9 @@
-import boscli
+import cmdweaver
 
-from boscli import interpreter as interpreter_module
-from boscli import basic_types
-from boscli.command import Command
-from boscli.readlinecli import readlinecli
+from cmdweaver import interpreter as interpreter_module
+from cmdweaver import basic_types
+from cmdweaver.command import Command
+from cmdweaver.readlinecli import readlinecli
 
 
 class InterfaceConfigurator:
