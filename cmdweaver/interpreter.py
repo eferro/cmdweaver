@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import sys
-from typing import TYPE_CHECKING, Any, TextIO
+from typing import TYPE_CHECKING, Any
 
-from cmdweaver import exceptions, filters
+from cmdweaver import exceptions
 from cmdweaver import parser as parser_module
 
 if TYPE_CHECKING:
@@ -38,15 +37,11 @@ class Interpreter:
     def __init__(
         self,
         parser: parser_module.Parser | None = None,
-        filter_factory: filters.FilterFactory | None = None,
-        output_stream: TextIO = sys.stdout,
         prompt: str = "",
     ) -> None:
         self._commands: list[Command] = []
         self.parser = parser if parser is not None else parser_module.Parser()
         self.context: list[Context] = [DefaultContext(prompt)]
-        self.filter_factory = filter_factory if filter_factory is not None else filters.FilterFactory()
-        self.output_stream = output_stream
 
     def add_command(self, command: Command) -> None:
         self._commands.append(command)
@@ -61,33 +56,6 @@ class Interpreter:
 
     def exit(self) -> None:
         raise exceptions.EndOfProgram()
-
-    def _extract_command_and_filter(self, tokens: list[str]) -> tuple[list[str], list[str] | None, bool]:
-        FILTER_SEP = "|"
-        command: list[str] = []
-        filter_command: list[str] = []
-        sep_found = False
-        for token in tokens:
-            if token == FILTER_SEP:
-                if sep_found:
-                    raise exceptions.SyntaxError()
-                sep_found = True
-                continue
-            if sep_found:
-                filter_command.append(token)
-            else:
-                command.append(token)
-        return command, filter_command or None, sep_found
-
-    def _filter_command(self, filter_tokens: list[str]) -> filters.ByLineBaseFilter:
-        try:
-            if "include".startswith(filter_tokens[0]):
-                return self.filter_factory.create_include_filter(filter_tokens[1], self.output_stream)
-            if "exclude".startswith(filter_tokens[0]):
-                return self.filter_factory.create_exclude_filter(filter_tokens[1], self.output_stream)
-            raise exceptions.SyntaxError()
-        except IndexError as err:
-            raise exceptions.SyntaxError() from err
 
     def _matching_command(self, tokens: list[str], line_text: str) -> Command:
         perfect_matching_commands = self._select_perfect_matching_commands(tokens)
@@ -109,32 +77,25 @@ class Interpreter:
         return results
 
     def parse(self, line_text: str) -> str | None:
-        _, _, result = self._parse(line_text)
+        _, result = self._parse(line_text)
         return result.cmd_id if result else None
 
     def eval(self, line_text: str) -> Any:
-        tokens, filter_tokens, matching_command = self._parse(line_text)
+        tokens, matching_command = self._parse(line_text)
         if not matching_command:
             return None
 
-        if not filter_tokens:
-            return self._execute_command(
-                matching_command, matching_command.normalize_tokens(tokens, self.actual_context())
-            )
+        return self._execute_command(
+            matching_command, matching_command.normalize_tokens(tokens, self.actual_context())
+        )
 
-        output_filter = self._filter_command(filter_tokens)
-        with filters.RedirectStdout(output_filter):
-            return self._execute_command(
-                matching_command, matching_command.normalize_tokens(tokens, self.actual_context())
-            )
-
-    def _parse(self, line_text: str) -> tuple[list[str], list[str] | None, Command | None]:
+    def _parse(self, line_text: str) -> tuple[list[str], Command | None]:
         line_text = line_text.strip()
         if not line_text:
-            return [], None, None
+            return [], None
 
-        tokens, filter_tokens, _ = self._extract_command_and_filter(self.parser.parse(line_text))
-        return tokens, filter_tokens, self._matching_command(tokens, line_text)
+        tokens = self.parser.parse(line_text)
+        return tokens, self._matching_command(tokens, line_text)
 
     def _execute_command(self, command: Command, tokens: list[str]) -> Any:
         arguments = command.matching_parameters(tokens)
@@ -171,11 +132,7 @@ class Interpreter:
 
     def complete(self, line_to_complete: str) -> set[str]:
         completions: set[str] = set()
-        tokens, filter_tokens, sep_found = self._extract_command_and_filter(self.parser.parse(line_to_complete))
-        if filter_tokens:
-            return {option for option in ["include", "exclude"] if option.startswith(filter_tokens[-1])}
-        if sep_found:
-            return {" "}
+        tokens = self.parser.parse(line_to_complete)
 
         for command in self._partial_match(line_to_complete):
             completions.update(command.complete(tokens, self.actual_context()))

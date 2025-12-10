@@ -90,16 +90,3 @@ class TestAutocomplete:
 
             assert_that(interpreter.complete("cmd "), has_length(0))
 
-    class TestFilterAutocomplete:
-        def test_autocompletes_with_space_when_starting_filter(self, interpreter):
-            assert_that(interpreter.complete("net show configuration |"), has_items(" "))
-
-        def test_autocompletes_all_available_filters(self, interpreter):
-            assert_that(interpreter.complete("net show configuration | "), has_items("include"))
-            assert_that(interpreter.complete("net show configuration | "), has_items("exclude"))
-
-        def test_autocompletes_include(self, interpreter):
-            assert_that(interpreter.complete("net show configuration | inclu"), has_items("include"))
-
-        def test_autocompletes_exclude(self, interpreter):
-            assert_that(interpreter.complete("net show configuration | exclu"), has_items("exclude"))

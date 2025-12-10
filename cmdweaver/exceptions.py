@@ -20,10 +20,6 @@ class AmbiguousCommandError(EvalError):
         super().__init__(matching_commands)
 
 
-class SyntaxError(EvalError):
-    pass
-
-
 class NotContextDefinedError(Exception):
     pass
 
