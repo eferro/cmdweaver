@@ -90,15 +90,6 @@ class TestInterpreter:
                 assert_that(cmds_implementation.cmd1, called())
                 assert_that(cmds_implementation.cmd2, is_not(called()))
 
-        class TestWhenAllKeywordsPartialMatch:
-            def test_executes_command(self, interpreter, cmds_implementation):
-                interpreter.eval("cm ke")
-
-                assert_that(
-                    cmds_implementation.cmd,
-                    called().with_args(tokens=["cmd", "key"], interpreter=interpreter, cmd_id="id1"),
-                )
-
         class TestWhenLineDoesNotMatchAnyCommand:
             def test_raises_exception(self, interpreter):
                 with pytest.raises(exceptions.NoMatchingCommandFoundError):
@@ -106,16 +97,21 @@ class TestInterpreter:
 
         class TestWhenTwoCommandsMatch:
             def test_raises_ambiguous_command_exception_with_commands_info(self, interpreter):
-                cmd1 = Command(["ambigous_cmd1"], Stub().cmd1)
+                cmd1 = Command(["duplicate_cmd"], Stub().cmd1)
                 interpreter.add_command(cmd1)
-                cmd2 = Command(["ambigous_cmd2"], Stub().cmd2)
+                cmd2 = Command(["duplicate_cmd"], Stub().cmd2)
                 interpreter.add_command(cmd2)
 
                 with pytest.raises(exceptions.AmbiguousCommandError) as exc_info:
-                    interpreter.eval("ambigous_cmd")
+                    interpreter.eval("duplicate_cmd")
 
                 assert_that(exc_info.value.matching_commands, has_length(2))
                 assert_that(exc_info.value.matching_commands, has_items(cmd1, cmd2))
+
+        class TestWhenKeywordsAreAbbreviated:
+            def test_does_not_execute_with_abbreviated_keywords(self, interpreter):
+                with pytest.raises(exceptions.NoMatchingCommandFoundError):
+                    interpreter.eval("cm ke")
 
         class TestStringParameters:
             def test_executes_command_passing_parameters(self, interpreter, cmds_implementation):
@@ -176,40 +172,6 @@ class TestInterpreter:
             def test_does_not_execute_when_parameter_does_not_match_regex(self, interpreter):
                 with pytest.raises(exceptions.NoMatchingCommandFoundError):
                     interpreter.eval("cmd_with_regex not_matching_parameter")
-
-    class TestCommandExecutionWithAbbreviations:
-        def test_executes_when_all_keywords_abbreviated(self, interpreter, cmds_implementation):
-            interpreter.eval("cm ke")
-
-            assert_that(
-                cmds_implementation.cmd,
-                called().with_args(tokens=["cmd", "key"], interpreter=interpreter, cmd_id="id1"),
-            )
-
-        def test_executes_when_only_one_keyword_abbreviated(self, interpreter, cmds_implementation):
-            interpreter.eval("cmd ke")
-
-            assert_that(
-                cmds_implementation.cmd,
-                called().with_args(tokens=["cmd", "key"], interpreter=interpreter, cmd_id="id1"),
-            )
-
-        def test_raises_ambiguous_when_two_commands_match_abbreviated(self, interpreter):
-            interpreter.add_command(Command(["configure"], Stub().cmd1))
-            interpreter.add_command(Command(["consolidate"], Stub().cmd2))
-
-            with pytest.raises(exceptions.AmbiguousCommandError):
-                interpreter.eval("con")
-
-        def test_executes_perfect_match_over_abbreviated_match(self, interpreter, cmds_implementation):
-            interpreter.add_command(Command(["keyword1"], cmds_implementation.perfect_match))
-            interpreter.add_command(Command(["keyword1.1"], cmds_implementation.normal_match))
-
-            interpreter.eval("keyword1")
-
-            assert_that(
-                cmds_implementation.perfect_match, called().with_args(tokens=["keyword1"], interpreter=interpreter)
-            )
 
     class TestCommandExecutionWithAutoexpansion:
         def test_expands_parameter_to_unique_autocompletion(self, interpreter, cmds_implementation):

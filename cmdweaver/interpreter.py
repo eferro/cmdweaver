@@ -58,15 +58,11 @@ class Interpreter:
         raise exceptions.EndOfProgram()
 
     def _matching_command(self, tokens: list[str], line_text: str) -> Command:
-        perfect_matching_commands = self._select_perfect_matching_commands(tokens)
-        if len(perfect_matching_commands) == 1:
-            return perfect_matching_commands[0]
-
         matching_commands = self._select_matching_commands(tokens)
         if len(matching_commands) == 1:
             return matching_commands[0]
 
-        if len(matching_commands) > 0:
+        if len(matching_commands) > 1:
             raise exceptions.AmbiguousCommandError(matching_commands)
         raise exceptions.NoMatchingCommandFoundError(line_text)
 
@@ -107,9 +103,6 @@ class Interpreter:
                 return command.execute(*arguments, tokens=tokens, interpreter=self, cmd_id=cmd_id)
         except KeyboardInterrupt:
             return None
-
-    def _select_perfect_matching_commands(self, tokens: list[str]) -> list[Command]:
-        return [command for command in self._commands if command.perfect_match(tokens, self.actual_context())]
 
     def _select_matching_commands(self, tokens: list[str]) -> list[Command]:
         return [command for command in self._commands if command.match(tokens, self.actual_context())]

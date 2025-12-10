@@ -75,7 +75,7 @@ class Command:
     def _match_word(self, index: int, word: str, context: Context, partial_line: list[str]) -> bool:
         definition = self.definitions[index]
         if isinstance(definition, KeywordType):
-            return definition.partial_match(word, context, partial_line=partial_line)
+            return definition.match(word, context, partial_line=partial_line)
         else:
             word = self._expand_parameter(self.definitions[index], word, partial_line, context)
             return self.definitions[index].match(word, context, partial_line=partial_line)
@@ -126,11 +126,6 @@ class Command:
         if len(tokens) != len(self.keywords):
             return False
         return all(self._match_word(index, word, context, partial_line=tokens) for index, word in enumerate(tokens))
-
-    def perfect_match(self, tokens: list[str], context: Context) -> bool:
-        if not self.match(tokens, context):
-            return False
-        return self.normalize_tokens(tokens, context) == tokens
 
     def matching_parameters(self, tokens: list[str]) -> list[str]:
         parameters: list[str] = []
