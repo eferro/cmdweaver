@@ -64,6 +64,9 @@ packages = ["cmdweaver"]
 [tool.setuptools.package-dir]
 "" = "."
 
+[tool.setuptools.package-data]
+cmdweaver = ["py.typed"]
+
 [tool.setuptools.exclude-package-data]
 "*" = ["examples/*", "tests/*"]
 
