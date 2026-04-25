@@ -61,9 +61,16 @@ class Interpreter:
         matching_commands = self._select_matching_commands(tokens)
         if len(matching_commands) == 1:
             return matching_commands[0]
-
         if len(matching_commands) > 1:
             raise exceptions.AmbiguousCommandError(matching_commands)
+
+        structural_matches = self._select_structural_matches(tokens)
+        if len(structural_matches) == 1:
+            command = structural_matches[0]
+            argument_errors = command.validate_arguments(tokens, self.actual_context())
+            raise exceptions.InvalidArgumentError(command, argument_errors)
+        if len(structural_matches) > 1:
+            raise exceptions.AmbiguousCommandError(structural_matches)
         raise exceptions.NoMatchingCommandFoundError(line_text)
 
     def eval_multiple(self, lines: list[str]) -> list[Any]:
@@ -106,6 +113,11 @@ class Interpreter:
 
     def _select_matching_commands(self, tokens: list[str]) -> list[Command]:
         return [command for command in self._commands if command.match(tokens, self.actual_context())]
+
+    def _select_structural_matches(self, tokens: list[str]) -> list[Command]:
+        return [
+            command for command in self._commands if command.structural_match(tokens, self.actual_context())
+        ]
 
     def actual_context(self) -> Context:
         return self.context[-1]

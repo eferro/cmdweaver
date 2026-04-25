@@ -151,9 +151,16 @@ class TestInterpreter:
                     called().with_args("op1", tokens=["cmd_with_ops", "op1"], interpreter=interpreter, cmd_id="id3"),
                 )
 
-            def test_does_not_execute_with_invalid_option(self, interpreter):
-                with pytest.raises(exceptions.NoMatchingCommandFoundError):
+            def test_raises_invalid_argument_when_option_value_is_unknown(self, interpreter):
+                with pytest.raises(exceptions.InvalidArgumentError) as exc_info:
                     interpreter.eval("cmd_with_ops invalid_op")
+
+                error = exc_info.value
+                assert_that(error.argument_errors, has_length(1))
+                argument_error = error.argument_errors[0]
+                assert_that(argument_error.index, is_(1))
+                assert_that(argument_error.value, is_("invalid_op"))
+                assert_that(argument_error.valid_options, is_(["op1", "op2"]))
 
         class TestRegexParameter:
             def test_executes_command_when_parameter_matches_regex(self, interpreter, cmds_implementation):
@@ -169,9 +176,16 @@ class TestInterpreter:
                     ),
                 )
 
-            def test_does_not_execute_when_parameter_does_not_match_regex(self, interpreter):
-                with pytest.raises(exceptions.NoMatchingCommandFoundError):
+            def test_raises_invalid_argument_when_value_does_not_match_regex(self, interpreter):
+                with pytest.raises(exceptions.InvalidArgumentError) as exc_info:
                     interpreter.eval("cmd_with_regex not_matching_parameter")
+
+                error = exc_info.value
+                assert_that(error.argument_errors, has_length(1))
+                argument_error = error.argument_errors[0]
+                assert_that(argument_error.index, is_(1))
+                assert_that(argument_error.value, is_("not_matching_parameter"))
+                assert_that(argument_error.valid_options, is_(none()))
 
     class TestCommandExecutionWithAutoexpansion:
         def test_expands_parameter_to_unique_autocompletion(self, interpreter, cmds_implementation):
@@ -206,6 +220,100 @@ class TestInterpreter:
                     "firstOp", "secondOp", tokens=["cmd1", "firstOp", "secondOp"], interpreter=interpreter
                 ),
             )
+
+    class TestInvalidArgument:
+        def test_reports_invalid_option_in_named_slot(self, cmds_implementation):
+            interp = interpreter_module.Interpreter()
+            env_slot = basic_types.OptionsType(["prod", "staging"], name="env")
+            interp.add_command(Command(["aws", "key", "reset", env_slot], cmds_implementation.cmd))
+
+            with pytest.raises(exceptions.InvalidArgumentError) as exc_info:
+                interp.eval("aws key reset banana")
+
+            error = exc_info.value
+            assert_that(error.command.keywords, is_(["aws", "key", "reset", env_slot]))
+            assert_that(error.argument_errors, has_length(1))
+            argument_error = error.argument_errors[0]
+            assert_that(argument_error.index, is_(3))
+            assert_that(argument_error.name, is_("env"))
+            assert_that(argument_error.value, is_("banana"))
+            assert_that(argument_error.slot_str, is_("<env>"))
+            assert_that(argument_error.valid_options, is_(["prod", "staging"]))
+
+        def test_reports_only_failing_slots_when_multiple_typed_args(self, cmds_implementation):
+            interp = interpreter_module.Interpreter()
+            interp.add_command(
+                Command(
+                    [
+                        "deploy",
+                        basic_types.OptionsType(["prod", "staging"], name="env"),
+                        basic_types.IntegerType(min=0, max=100, name="version"),
+                    ],
+                    cmds_implementation.cmd,
+                )
+            )
+
+            with pytest.raises(exceptions.InvalidArgumentError) as exc_info:
+                interp.eval("deploy prod NaN")
+
+            error = exc_info.value
+            assert_that(error.argument_errors, has_length(1))
+            assert_that(error.argument_errors[0].index, is_(2))
+            assert_that(error.argument_errors[0].name, is_("version"))
+            assert_that(error.argument_errors[0].value, is_("NaN"))
+            assert_that(error.argument_errors[0].valid_options, is_(none()))
+
+        def test_genuinely_unknown_keyword_still_raises_no_match(self, cmds_implementation):
+            interp = interpreter_module.Interpreter()
+            interp.add_command(Command(["aws", "key", "reset"], cmds_implementation.cmd))
+
+            with pytest.raises(exceptions.NoMatchingCommandFoundError):
+                interp.eval("totally unknown command here")
+
+        def test_invalid_option_does_not_promote_other_keyword_paths(self, cmds_implementation):
+            interp = interpreter_module.Interpreter()
+            interp.add_command(
+                Command(
+                    ["aws", "key", "reset", basic_types.OptionsType(["prod", "staging"], name="env")],
+                    cmds_implementation.cmd_reset,
+                )
+            )
+            interp.add_command(Command(["aws", "key", "rotate"], cmds_implementation.cmd_rotate))
+
+            with pytest.raises(exceptions.InvalidArgumentError) as exc_info:
+                interp.eval("aws key reset banana")
+
+            assert_that(exc_info.value.command.command_function, is_(cmds_implementation.cmd_reset))
+
+    class TestStructuralMatch:
+        def test_returns_false_when_keyword_position_differs(self, cmds_implementation):
+            command = Command(
+                ["aws", "key", "reset", basic_types.OptionsType(["prod"], name="env")],
+                cmds_implementation.cmd,
+            )
+            context = interpreter_module.DefaultContext()
+
+            assert_that(command.structural_match(["aws", "key", "rotate", "prod"], context), is_(False))
+
+        def test_returns_false_when_token_count_mismatches(self, cmds_implementation):
+            command = Command(
+                ["aws", "key", "reset", basic_types.OptionsType(["prod"], name="env")],
+                cmds_implementation.cmd,
+            )
+            context = interpreter_module.DefaultContext()
+
+            assert_that(command.structural_match(["aws", "key", "reset"], context), is_(False))
+
+        def test_returns_true_for_matching_keywords_even_with_invalid_typed_value(
+            self, cmds_implementation
+        ):
+            command = Command(
+                ["aws", "key", "reset", basic_types.OptionsType(["prod"], name="env")],
+                cmds_implementation.cmd,
+            )
+            context = interpreter_module.DefaultContext()
+
+            assert_that(command.structural_match(["aws", "key", "reset", "banana"], context), is_(True))
 
     class TestPromptManagement:
         def test_has_default_prompt(self, interpreter):

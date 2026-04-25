@@ -3,6 +3,9 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, TypeAlias
 
+from cmdweaver.basic_types import OptionsType
+from cmdweaver.exceptions import ArgumentError
+
 if TYPE_CHECKING:
     from cmdweaver.basic_types import BaseType
     from cmdweaver.interpreter import Context
@@ -126,6 +129,41 @@ class Command:
         if len(tokens) != len(self.keywords):
             return False
         return all(self._match_word(index, word, context, partial_line=tokens) for index, word in enumerate(tokens))
+
+    def structural_match(self, tokens: list[str], context: Context) -> bool:
+        if not self.context_match(context):
+            return False
+        if len(tokens) != len(self.keywords):
+            return False
+        for index, word in enumerate(tokens):
+            definition = self.definitions[index]
+            if isinstance(definition, KeywordType) and not definition.match(word, context, partial_line=tokens):
+                return False
+        return True
+
+    def validate_arguments(self, tokens: list[str], context: Context) -> list[ArgumentError]:
+        errors: list[ArgumentError] = []
+        for index, word in enumerate(tokens):
+            definition = self.definitions[index]
+            if isinstance(definition, KeywordType):
+                continue
+            expanded_word = self._expand_parameter(definition, word, tokens, context)
+            if not definition.match(expanded_word, context, partial_line=tokens):
+                valid_options = (
+                    list(definition.get_valid_options())
+                    if isinstance(definition, OptionsType)
+                    else None
+                )
+                errors.append(
+                    ArgumentError(
+                        index=index,
+                        name=getattr(definition, "name", None),
+                        value=word,
+                        slot_str=str(definition),
+                        valid_options=valid_options,
+                    )
+                )
+        return errors
 
     def matching_parameters(self, tokens: list[str]) -> list[str]:
         parameters: list[str] = []
