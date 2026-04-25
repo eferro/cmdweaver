@@ -1,6 +1,6 @@
 import pytest
 from doublex import ANY_ARG, Spy, Stub, assert_that, called, when
-from hamcrest import has_items, has_length, is_, is_not, none
+from hamcrest import contains_string, has_items, has_length, is_, is_not, none
 
 from cmdweaver import basic_types, exceptions
 from cmdweaver import interpreter as interpreter_module
@@ -285,6 +285,51 @@ class TestInterpreter:
 
             assert_that(exc_info.value.command.command_function, is_(cmds_implementation.cmd_reset))
 
+        def test_reports_argument_error_without_name_when_slot_is_unnamed(self, cmds_implementation):
+            interp = interpreter_module.Interpreter()
+            interp.add_command(Command(["pick", basic_types.OptionsType(["a", "b"])], cmds_implementation.cmd))
+
+            with pytest.raises(exceptions.InvalidArgumentError) as exc_info:
+                interp.eval("pick z")
+
+            argument_error = exc_info.value.argument_errors[0]
+            assert_that(argument_error.name, is_(none()))
+            assert_that(argument_error.slot_str, is_("<a|b>"))
+            assert_that(argument_error.valid_options, is_(["a", "b"]))
+
+        def test_raises_ambiguous_when_multiple_commands_share_structural_shape(self, cmds_implementation):
+            interp = interpreter_module.Interpreter()
+            interp.add_command(Command(["pick", basic_types.OptionsType(["a", "b"])], cmds_implementation.cmd_one))
+            interp.add_command(Command(["pick", basic_types.OptionsType(["c", "d"])], cmds_implementation.cmd_two))
+
+            with pytest.raises(exceptions.AmbiguousCommandError) as exc_info:
+                interp.eval("pick z")
+
+            assert_that(exc_info.value.matching_commands, has_length(2))
+
+        def test_str_includes_named_slot_value(self, cmds_implementation):
+            interp = interpreter_module.Interpreter()
+            interp.add_command(
+                Command(
+                    ["aws", "key", "reset", basic_types.OptionsType(["prod", "staging"], name="env")],
+                    cmds_implementation.cmd,
+                )
+            )
+
+            with pytest.raises(exceptions.InvalidArgumentError) as exc_info:
+                interp.eval("aws key reset banana")
+
+            assert_that(str(exc_info.value), contains_string("env='banana'"))
+
+        def test_str_falls_back_to_arg_index_when_slot_unnamed(self, cmds_implementation):
+            interp = interpreter_module.Interpreter()
+            interp.add_command(Command(["pick", basic_types.OptionsType(["a", "b"])], cmds_implementation.cmd))
+
+            with pytest.raises(exceptions.InvalidArgumentError) as exc_info:
+                interp.eval("pick z")
+
+            assert_that(str(exc_info.value), contains_string("arg[1]='z'"))
+
     class TestStructuralMatch:
         def test_returns_false_when_keyword_position_differs(self, cmds_implementation):
             command = Command(
@@ -295,7 +340,7 @@ class TestInterpreter:
 
             assert_that(command.structural_match(["aws", "key", "rotate", "prod"], context), is_(False))
 
-        def test_returns_false_when_token_count_mismatches(self, cmds_implementation):
+        def test_returns_false_when_tokens_are_shorter_than_keywords(self, cmds_implementation):
             command = Command(
                 ["aws", "key", "reset", basic_types.OptionsType(["prod"], name="env")],
                 cmds_implementation.cmd,
@@ -303,6 +348,15 @@ class TestInterpreter:
             context = interpreter_module.DefaultContext()
 
             assert_that(command.structural_match(["aws", "key", "reset"], context), is_(False))
+
+        def test_returns_false_when_tokens_are_longer_than_keywords(self, cmds_implementation):
+            command = Command(
+                ["aws", "key", "reset", basic_types.OptionsType(["prod"], name="env")],
+                cmds_implementation.cmd,
+            )
+            context = interpreter_module.DefaultContext()
+
+            assert_that(command.structural_match(["aws", "key", "reset", "prod", "extra"], context), is_(False))
 
         def test_returns_true_for_matching_keywords_even_with_invalid_typed_value(
             self, cmds_implementation
@@ -314,6 +368,16 @@ class TestInterpreter:
             context = interpreter_module.DefaultContext()
 
             assert_that(command.structural_match(["aws", "key", "reset", "banana"], context), is_(True))
+
+        def test_returns_false_when_command_is_scoped_to_a_different_context(self, cmds_implementation):
+            command = Command(
+                ["scoped", basic_types.OptionsType(["a", "b"], name="opt")],
+                cmds_implementation.cmd,
+                context_name="config",
+            )
+            default_context = interpreter_module.DefaultContext()
+
+            assert_that(command.structural_match(["scoped", "a"], default_context), is_(False))
 
     class TestPromptManagement:
         def test_has_default_prompt(self, interpreter):

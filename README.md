@@ -123,6 +123,47 @@ interpreter.help("set")  # Returns dict of matching commands with their help tex
 interpreter.all_commands_help()
 ```
 
+## Argument Validation Errors
+
+When an input lines up with a registered command's keyword shape but a typed
+slot rejects the value (e.g. `OptionsType(["prod", "staging"])` receives
+`banana`), the interpreter raises `InvalidArgumentError` with per-slot
+diagnostics — instead of the generic `NoMatchingCommandFoundError`. This lets
+callers surface precise feedback like *"argument `env` is `banana`. Valid
+values: `prod`, `staging`."*
+
+```python
+from cmdweaver.exceptions import InvalidArgumentError
+
+try:
+    interpreter.eval("aws key reset banana")
+except InvalidArgumentError as error:
+    print(error.command)                  # aws key reset <env>
+    for arg in error.argument_errors:
+        print(arg.index, arg.name, arg.value, arg.valid_options)
+        # 3 env banana ['prod', 'staging']
+```
+
+`InvalidArgumentError.argument_errors` is a list of `ArgumentError` records:
+
+| Field | Description |
+|-------|-------------|
+| `index` | Position of the failing token (0-based). |
+| `name` | Slot name (from `BaseType(name=...)`); `None` if the slot was unnamed. |
+| `value` | Raw token the caller supplied. |
+| `slot_str` | Human-readable slot representation (e.g. `<env>`, `<prod\|staging>`). |
+| `valid_options` | List of accepted values for `OptionsType` / `DynamicOptionsType`; `None` for other types. |
+
+The interpreter dispatch order is unchanged for valid inputs:
+
+1. **Strict matches first** — if exactly one command matches keywords *and* validates every typed slot, it executes (today's happy path).
+2. **Structural matches next** — keywords match and length is right, but at least one typed slot fails. Exactly one structural match raises `InvalidArgumentError`; multiple structural matches raise `AmbiguousCommandError`.
+3. **No match** — `NoMatchingCommandFoundError`, as before.
+
+You can also call the new `Command.structural_match(tokens, context)` and
+`Command.validate_arguments(tokens, context)` directly if you want to drive
+your own dispatch.
+
 ## About this Fork
 
 This project is a fork of [aleasoluciones/boscli](https://github.com/aleasoluciones/boscli). While we acknowledge and appreciate the original work, this fork follows its own direction with different goals and development priorities.
